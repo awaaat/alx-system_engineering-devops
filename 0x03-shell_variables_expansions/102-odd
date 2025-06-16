@@ -1,3 +1,2 @@
 #!/bin/bash
-for n in $@; do [ $((n % 2)) -eq 1 ] && echo $n; done
-
+awk 'NR % 2 == 1'
