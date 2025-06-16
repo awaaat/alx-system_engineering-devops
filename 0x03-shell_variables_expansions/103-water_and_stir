@@ -1,0 +1,31 @@
+#!/bin/bash
+
+wbase=waetdr
+sbase=stir.
+rbase=bestchol
+
+decode() {
+  local input=$1 base=$2 chars val=0
+  chars=$(echo "$base" | grep -o .)
+  for (( i=0; i<${#input}; i++ )); do
+    c=${input:$i:1}
+    idx=$(expr index "$base" "$c" - 1)
+    val=$((val * ${#base} + idx))
+  done
+  echo "$val"
+}
+
+encode() {
+  local num=$1 base=$2 out=""
+  while (( num > 0 )); do
+    idx=$(( num % ${#base} ))
+    out=${base:idx:1}$out
+    num=$(( num / ${#base} ))
+  done
+  echo "${out:-${base:0:1}}"
+}
+
+wval=$(decode "$WATER" "$wbase")
+sval=$(decode "$STIR" "$sbase")
+sum=$((wval + sval))
+encode "$sum" "$rbase"
