@@ -1,2 +1,2 @@
 #!/bin/bash
-for i in {a..z}; do for j in {a..z}; do [[ $i$j != oo ]]&&echo $i$j; done; done
+awk 'BEGIN{for(i=97;i<=122;i++)for(j=97;j<=122;j++){if(i==111&&j==111)next;printf "%c%c\n",i,j}}'
