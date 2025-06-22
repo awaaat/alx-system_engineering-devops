@@ -1,2 +1,0 @@
--This is ALX system engineering
--Bash scripting

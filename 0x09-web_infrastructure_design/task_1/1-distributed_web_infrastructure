@@ -1,0 +1,53 @@
+# Task 1: Distributed Web Infrastructure
+
+## Diagram
+[Link to hosted diagram image, e.g., https://i.imgur.com/foobar.png]
+
+## GitHub File Link
+https://github.com/your-username/alx-system_engineering-devops/blob/main/0x09-web_infrastructure_design/1-distributed_web_infrastructure
+
+---
+
+## Components and Purpose
+
+- **HAProxy (Load Balancer)**: Splits traffic evenly across backend servers to prevent overload.  
+  - Algorithm: **Round Robin** – rotates requests in order.
+  - Setup: **Active-Active** – both web and app servers handle requests simultaneously.
+
+- **Web Server (Nginx)**: Handles static assets (HTML, CSS, JS, images).  
+  - Offloads work from application logic.
+
+- **App Server (Gunicorn/uWSGI)**: Handles backend logic (like login, form processing).
+
+- **MySQL DB**: Centralized data store for all user data, posts, and sessions.
+
+---
+
+## Concepts
+
+### Load Balancing
+- **Active-Active**: All nodes live and share load.
+- **Active-Passive**: One node on standby, used for failover only.
+
+### Database Cluster
+- **Primary Node**: Accepts writes and updates.
+- **Replica Node**: Read-only copy, used to offload reads.
+
+---
+
+## Limitations and Risks
+
+- ❌ **SPOF**: HAProxy or MySQL failing will break the entire system.
+- ❌ **Security**: No firewalls or HTTPS = exposed to threats like MITM or brute force.
+- ❌ **Monitoring**: You have no visibility — can't detect failure, spikes, or intrusion.
+- ⚠️ **Sticky Sessions**: Without session persistence, user state can break.
+
+---
+
+## Future Improvements
+
+- Add replica DBs and promote if master fails
+- Use SSL/TLS (HTTPS) with valid certificate
+- Add firewalls between each component
+- Add Prometheus + Grafana for monitoring
+- Consider auto-scaling with AWS/GCP

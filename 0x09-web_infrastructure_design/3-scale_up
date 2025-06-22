@@ -1,0 +1,73 @@
+# Task 3: Scale Up - Component Isolation and LB Cluster
+
+## 🎯 Objective
+
+Transform your infrastructure to be:
+
+- Highly Available (no SPOF)
+- Fully Modular (each role has its own server)
+- More Secure and Scalable
+
+---
+
+## 🏗️ New Architecture
+
+| Server | Purpose |
+|--------|---------|
+| lb1    | Active Load Balancer (HAProxy + SSL) |
+| lb2    | Passive Load Balancer (standby) |
+| web1   | Web Server (Nginx) |
+| app1   | App Server (Gunicorn) |
+| db1    | MySQL DB Primary |
+
+---
+
+## 🔁 Load Balancer Cluster
+
+- Uses **HAProxy** with **keepalived** on both `lb1` and `lb2`
+- Both share a **virtual IP**: `20.20.20.20`
+- DNS resolves to this VIP
+- If `lb1` fails → VIP shifts to `lb2`
+
+---
+
+## 🧩 Component Isolation
+
+| Component | Why it's isolated |
+|----------|------------------|
+| Web Server | Serves static files (e.g., /index.html) — easier to cache and scale separately |
+| App Server | Handles backend logic (e.g., logins, sessions, APIs) |
+| DB Server  | Central data store — now protected from any other load |
+
+---
+
+## 🔐 Security Benefits
+
+- Services can be firewalled individually
+- App server is only one with DB access
+- Load balancer is the only entry point exposed to the public
+
+---
+
+## ⚙️ High Availability
+
+- The Load Balancer cluster ensures no downtime
+- Even if `lb1` crashes, `lb2` becomes master in under 1 second
+
+---
+
+## ❗ Remaining Issues (Optional Future Improvements)
+
+- No read-replicas for DB (still one write target)
+- Load Balancers are only HA at layer 4 — maybe consider DNS failover
+- Monitoring not shown here, but should be added to all nodes (reused from Task 2)
+
+---
+
+## ✅ Summary
+
+This setup gives you:
+
+- Separate servers for each tier (clean architecture)
+- High availability via clustered load balancers
+- Ready for horizontal scaling (just add more web/app servers)
