@@ -1,3 +1,4 @@
 #!/usr/bin/env bash
 # Connect to the server using the private key ~/.ssh/school with user ubuntu
+
 ssh dc5c19c44ba9@dc5c19c44ba9.93883f52.alx-cod.online
