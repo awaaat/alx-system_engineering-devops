@@ -1,0 +1,6 @@
+Host school
+    HostName dc5c19c44ba9.93883f52.alx-cod.online
+    User dc5c19c44ba9
+    Port 22
+    IdentityFile ~/.ssh/school
+    PasswordAuthentication no
