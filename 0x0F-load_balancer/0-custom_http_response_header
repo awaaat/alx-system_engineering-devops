@@ -1,0 +1,68 @@
+#!/usr/bin/env bash
+# Script to configure Nginx with a custom HTTP header
+# This script sets up a web server that identifies itself in HTTP responses
+
+# Update the package list to ensure we have the latest package information
+apt-get update -y
+
+# Install nginx web server if it's not already installed
+apt-get install nginx -y
+
+# Create the basic "Hello World!" page that will be served by nginx
+echo "Hello World!" > /var/www/html/index.html
+
+# Get the hostname of the current server
+# This will be used as the value for our custom HTTP header
+HOSTNAME=$(hostname)
+
+# Configure nginx with custom HTTP header
+# We need to add a custom header that shows which server is responding
+# This helps track which server in a load-balanced setup is handling requests
+
+# Create a new nginx configuration file
+# The add_header directive adds our custom header to all responses
+cat > /etc/nginx/sites-available/default << EOF
+server {
+    listen 80 default_server;
+    listen [::]:80 default_server;
+
+    root /var/www/html;
+    index index.html index.htm index.nginx-debian.html;
+
+    server_name _;
+
+    # Add custom header to identify which server is responding
+    # X-Served-By is the header name, and we set it to the server's hostname
+    add_header X-Served-By $HOSTNAME;
+
+    location / {
+        try_files \$uri \$uri/ =404;
+    }
+
+    # Keep the redirect from previous project if needed
+    location /redirect_me {
+        return 301 https://www.youtube.com/watch?v=QH2-TGUlwu4;
+    }
+
+    # Custom 404 error page
+    error_page 404 /404.html;
+    location = /404.html {
+        internal;
+    }
+}
+EOF
+
+# Create the custom 404 page
+echo "Ceci n'est pas une page" > /var/www/html/404.html
+
+# Start nginx service
+service nginx start
+
+# Enable nginx to start automatically on boot
+systemctl enable nginx
+
+# Restart nginx to apply the new configuration
+service nginx restart
+
+# Test the configuration (optional - for debugging)
+# nginx -t

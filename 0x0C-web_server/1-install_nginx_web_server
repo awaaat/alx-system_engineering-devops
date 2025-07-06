@@ -1,0 +1,28 @@
+#!/usr/bin/env bash
+
+# Script to install and configure Nginx web server
+# This will set up a basic web server that responds with "Hello World!"
+
+# Update the package list to get the latest available packages
+# -y flag automatically answers "yes" to all prompts
+apt-get update -y
+
+# Install nginx web server
+# -y flag automatically answers "yes" to installation prompts
+apt-get install nginx -y
+
+# Create a simple HTML page that contains "Hello World!"
+# This will be served when someone visits the root of our website
+echo "Hello World!" > /var/www/html/index.html
+
+# Start the nginx service to make it active
+# This command starts the web server so it can receive requests
+service nginx start
+
+# Enable nginx to start automatically when the server boots up
+# This ensures the web server is always running after system restarts
+systemctl enable nginx
+
+# Restart nginx to make sure all configurations are loaded properly
+# This ensures our new index.html file is being served
+service nginx restart

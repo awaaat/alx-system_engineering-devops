@@ -1,0 +1,73 @@
+#!/usr/bin/env bash
+# Script to install and configure HAProxy load balancer
+# This script sets up HAProxy to distribute traffic between multiple web servers
+
+# Update package list
+apt-get update -y
+
+# Install HAProxy (High Availability Proxy)
+# HAProxy is a popular open-source load balancer and proxy server
+apt-get install haproxy -y
+
+# Configure HAProxy to distribute traffic between web servers
+# We'll set up round-robin load balancing between web-01 and web-02
+
+# Create HAProxy configuration file
+# This configuration tells HAProxy how to distribute incoming requests
+cat > /etc/haproxy/haproxy.cfg << 'EOF'
+global
+    # Global settings for HAProxy
+    daemon
+    user haproxy
+    group haproxy
+    chroot /var/lib/haproxy
+    stats socket /run/haproxy/admin.sock mode 660 level admin
+    stats timeout 30s
+
+defaults
+    # Default settings for all frontend and backend sections
+    mode http
+    timeout connect 5000ms
+    timeout client 50000ms
+    timeout server 50000ms
+    option httplog
+    option dontlognull
+
+frontend web_frontend
+    # This section defines how HAProxy receives incoming requests
+    bind *:80
+    # Direct all requests to our backend servers
+    default_backend web_servers
+
+backend web_servers
+    # This section defines the pool of servers that will handle requests
+    # balance roundrobin: distribute requests evenly across servers
+    balance roundrobin
+    
+    # Define our web servers
+    # Replace with your actual server IPs or hostnames
+    # The 'check' option makes HAProxy monitor server health
+    server web-01 [WEB-01-IP]:80 check
+    server web-02 [WEB-02-IP]:80 check
+EOF
+
+# Note: You need to replace [WEB-01-IP] and [WEB-02-IP] with actual IP addresses
+# For example, if your servers are at 34.198.248.145 and 54.89.38.100:
+# server web-01 34.198.248.145:80 check
+# server web-02 54.89.38.100:80 check
+
+# If you have the actual IPs, uncomment and modify these lines:
+# sed -i 's/\[WEB-01-IP\]/34.198.248.145/g' /etc/haproxy/haproxy.cfg
+# sed -i 's/\[WEB-02-IP\]/54.89.38.100/g' /etc/haproxy/haproxy.cfg
+
+# Enable HAProxy to start on boot
+systemctl enable haproxy
+
+# Start HAProxy service
+systemctl start haproxy
+
+# Restart HAProxy to ensure configuration is loaded
+systemctl restart haproxy
+
+# Verify HAProxy is running (optional)
+# systemctl status haproxy
