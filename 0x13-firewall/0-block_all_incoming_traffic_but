@@ -1,0 +1,20 @@
+#!/bin/bash
+# 0-block_all_incoming_traffic_but allow some
+
+#reset UFW password(recomended)
+sudo ufw --force reset
+
+# Set default policies
+sudo ufw default allow outgoing # Allow all outbound connections
+sudo ufw default deny incoming # Deny all inbound connections
+
+# set the default policies
+sudo ufw allow 22/tcp
+sudo ufw allow 80/tcp
+sudo ufw allow 443/tcp
+
+#enable ufw
+sudo ufw --force enable
+
+
+sudo ufw status verbose
