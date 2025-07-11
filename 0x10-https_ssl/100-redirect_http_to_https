@@ -1,0 +1,47 @@
+# ---------- GLOBAL SETTINGS ----------
+global
+    daemon                    # Run HAProxy as a background service
+    maxconn 2048              # Allow up to 2048 simultaneous connections
+    user haproxy              # Run as the haproxy user
+    group haproxy             # Run as the haproxy group
+
+# ---------- DEFAULTS FOR ALL SECTIONS ----------
+defaults
+    mode http                         # Work in HTTP mode (not TCP mode)
+    log global                        # Use global logging
+    option httplog                    # Use HTTP-specific log format
+    option dontlognull                # Don't log empty requests
+    option http-server-close          # Close server connection after each response
+    option forwardfor except 127.0.0.0/8  # Add client IP via X-Forwarded-For header
+    option redispatch                 # Retry another server if the first fails
+    retries 3                         # Try up to 3 times on failure
+    timeout http-request 10s         # Time allowed to get the full HTTP request
+    timeout queue 1m                 # Max time to wait in the queue
+    timeout connect 10s              # Time to wait for connection to backend
+    timeout client 1m                # Time to wait for activity from client
+    timeout server 1m                # Time to wait for activity from server
+    timeout http-keep-alive 10s      # Timeout for HTTP keep-alive
+    timeout check 10s                # Health check timeout
+    maxconn 3000                     # Override global maxconn if needed
+
+# ---------- FRONTEND (ENTRY POINT) ----------
+frontend web_frontend
+    bind *:80                         # Listen on port 80 (HTTP - unencrypted)
+    bind *:443 ssl crt /etc/ssl/certs/www.yourdomain.com.pem
+    # ↑ Listen on port 443 (HTTPS - encrypted)
+    # crt = fullchain + private key in one PEM file (from certbot)
+
+    redirect scheme https if !{ ssl_fc }
+    # ↑ If the request is NOT using SSL (i.e., HTTP), redirect to HTTPS version
+    # ssl_fc is true when frontend connection is using SSL
+    # !{ ssl_fc } means: NOT using SSL → so it's HTTP
+
+    default_backend web_servers       # Send requests to this backend group
+
+# ---------- BACKEND (WHERE TRAFFIC GOES NEXT) ----------
+backend web_servers
+    balance roundrobin               # Distribute traffic evenly across servers
+    server web-01 [WEB-01-IP]:80 check
+    # ↑ Send to web-01 at port 80, and health check it
+    server web-02 [WEB-02-IP]:80 check
+    # ↑ Send to web-02 at port 80, and health check it

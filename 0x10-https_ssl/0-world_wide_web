@@ -1,0 +1,54 @@
+#!/usr/bin/env bash
+# This script displays DNS record information about subdomains using the 'dig' command
+
+# Function to get subdomain information
+get_subdomain_info() {
+    local domain="$1"        # Save the first function argument as 'domain' (e.g., example.com)
+    local subdomain="$2"     # Save the second function argument as 'subdomain' (e.g., www)
+
+    # Run 'dig' to get DNS data for subdomain.domain (e.g., www.example.com)
+    # 'dig' outputs structured info; we want the actual answer line from the DNS section
+    # 'grep -A1' = find the line containing "ANSWER SECTION:" and include 1 line *after* it (that's the actual answer)
+    # 'tail -1' = ensures we only get that answer line and not the header
+    local dig_output=$(dig "$subdomain.$domain" | grep -A1 'ANSWER SECTION:' | tail -1)
+
+    # Check if 'dig_output' is not empty (i.e., a DNS record was found)
+    if [ -n "$dig_output" ]; then
+        # Use awk to extract the 4th column = record type (e.g., A, CNAME, MX)
+        # Example line: www.example.com. 300 IN A 93.184.216.34
+        # Fields:        $1           $2  $3 $4 $5
+        local record_type=$(echo "$dig_output" | awk '{print $4}')
+
+        # Use awk to extract the 5th column = the destination (IP address or hostname)
+        local destination=$(echo "$dig_output" | awk '{print $5}')
+
+        # Print a readable message showing what kind of record it is and where it points
+        echo "The subdomain $subdomain is a $record_type record and points to $destination"
+    fi
+}
+
+# ------------------------
+# Main script logic below
+# ------------------------
+
+# If exactly one argument is passed (i.e., only the domain)
+if [ $# -eq 1 ]; then
+    domain="$1"  # Save the domain name provided
+
+    # Loop over a list of common subdomains
+    for subdomain in www lb-01 web-01 web-02; do
+        get_subdomain_info "$domain" "$subdomain"  # Check each one
+    done
+
+# If two arguments are passed (i.e., domain and subdomain)
+elif [ $# -eq 2 ]; then
+    domain="$1"
+    subdomain="$2"
+    get_subdomain_info "$domain" "$subdomain"  # Check the specific subdomain
+
+# If the user passed incorrect number of arguments
+else
+    # Show usage instructions
+    echo "Usage: $0 domain [subdomain]"
+    exit 1  # Exit with error code
+fi

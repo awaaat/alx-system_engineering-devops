@@ -1,0 +1,41 @@
+# ---- GLOBAL SECTION ----
+global
+    daemon             # Run HAProxy as a background process (daemon mode)
+    maxconn 2048       # Maximum number of simultaneous connections
+    user haproxy       # Run as the 'haproxy' user
+    group haproxy      # Run as the 'haproxy' group
+
+# ---- DEFAULTS SECTION ----
+defaults
+    mode http                          # Work in HTTP mode (not TCP)
+    log global                         # Use global logging rules
+    option httplog                     # Use HTTP-specific logging format
+    option dontlognull                 # Do not log empty connections
+    option http-server-close           # Close the server connection after each request
+    option forwardfor except 127.0.0.0/8   # Add the X-Forwarded-For header, except for localhost
+    option redispatch                  # Retry a failed server if needed
+    retries 3                          # Retry up to 3 times on failure
+    timeout http-request 10s          # Timeout for HTTP request headers
+    timeout queue 1m                  # Timeout for waiting in queue
+    timeout connect 10s               # Timeout for establishing a TCP connection
+    timeout client 1m                 # Timeout for client-side inactivity
+    timeout server 1m                 # Timeout for server-side inactivity
+    timeout http-keep-alive 10s       # Timeout for keep-alive connections
+    timeout check 10s                 # Timeout for health checks
+    maxconn 3000                      # Override max connections for this section
+
+# ---- FRONTEND SECTION ----
+frontend web_frontend
+    bind *:80                        # Listen on HTTP port 80 (unencrypted)
+    bind *:443 ssl crt /etc/ssl/certs/www.yourdomain.com.pem
+    # ↑ Also listen on HTTPS port 443 with SSL using the given certificate file
+    # Replace `www.yourdomain.com.pem` with your actual full chain SSL certificate
+    default_backend web_servers     # Send all incoming traffic to the 'web_servers' backend
+
+# ---- BACKEND SECTION ----
+backend web_servers
+    balance roundrobin              # Load balancing: alternate between servers
+    server web-01 [WEB-01-IP]:80 check
+    # ↑ Send traffic to web-01 on port 80; health check enabled
+    server web-02 [WEB-02-IP]:80 check
+    # ↑ Send traffic to web-02 on port 80; health check enabled
