@@ -1,54 +1,105 @@
 #!/usr/bin/env bash
-# This script displays DNS record information about subdomains using the 'dig' command
+# Script Name: 0-world_wide_web
+# Description: This Bash script queries DNS records for subdomains of a given domain
+#              using the 'dig' command. It displays the record type and destination
+#              for specified subdomains or a default set of subdomains.
+# Purpose: To audit DNS configurations for subdomains as part of a system
+#          administration task, ensuring correct DNS mappings for a domain.
+# Usage: ./0-world_wide_web <domain> [subdomain]
+#   - domain: The domain name to audit (e.g., example.com)
+#   - subdomain: Optional specific subdomain to audit (e.g., www)
+# Output: Prints lines in the format:
+#         "The subdomain [SUB_DOMAIN] is a [RECORD_TYPE] record and points to [DESTINATION]"
+# Requirements:
+#   - Must use 'awk' for parsing DNS output
+#   - Must include at least one Bash function
+#   - Must handle both single domain and domain+subdomain inputs
+#   - Must pass Shellcheck (version 0.3.7) without errors
+#   - Ignores nonexistent subdomains (per project requirements)
+# Author: [Your Name]
+# Date: July 14, 2025
 
-# Function to get subdomain information
+# Function: get_subdomain_info
+# Description: Queries DNS information for a specific subdomain using 'dig',
+#              extracts the record type and destination, and prints the result
+#              in the required format.
+# Arguments:
+#   $1 - domain: The domain name (e.g., example.com)
+#   $2 - subdomain: The subdomain to query (e.g., www)
+# Returns: Prints the DNS information or nothing if no valid record is found
 get_subdomain_info() {
-    local domain="$1"        # Save the first function argument as 'domain' (e.g., example.com)
-    local subdomain="$2"     # Save the second function argument as 'subdomain' (e.g., www)
+    # Store arguments in local variables for clarity
+    local domain="$1"        # The domain name (e.g., example.com)
+    local subdomain="$2"     # The subdomain name (e.g., www)
 
-    # Run 'dig' to get DNS data for subdomain.domain (e.g., www.example.com)
-    # 'dig' outputs structured info; we want the actual answer line from the DNS section
-    # 'grep -A1' = find the line containing "ANSWER SECTION:" and include 1 line *after* it (that's the actual answer)
-    # 'tail -1' = ensures we only get that answer line and not the header
-    local dig_output=$(dig "$subdomain.$domain" | grep -A1 'ANSWER SECTION:' | tail -1)
+    # Construct the full domain name (e.g., www.example.com)
+    local full_domain="${subdomain}.${domain}"
 
-    # Check if 'dig_output' is not empty (i.e., a DNS record was found)
-    if [ -n "$dig_output" ]; then
-        # Use awk to extract the 4th column = record type (e.g., A, CNAME, MX)
-        # Example line: www.example.com. 300 IN A 93.184.216.34
-        # Fields:        $1           $2  $3 $4 $5
-        local record_type=$(echo "$dig_output" | awk '{print $4}')
+    # Use 'dig' to query DNS records for the full domain
+    # '+short' option makes output concise, showing only the answer
+    # Example output for 'dig +short www.example.com': 93.184.216.34
+    # If it's an A record, we expect an IP address
+    # For other record types (e.g., CNAME), it might return a hostname
+    local dig_output
+    dig_output=$(dig +short "${full_domain}")
 
-        # Use awk to extract the 5th column = the destination (IP address or hostname)
-        local destination=$(echo "$dig_output" | awk '{print $5}')
+    # Check if dig returned any output (non-empty means a record exists)
+    if [ -n "${dig_output}" ]; then
+        # Since 'dig +short' doesn't tell us the record type, we need to query again
+        # Use full 'dig' output and parse the ANSWER SECTION
+        # Example full dig output:
+        # ;; ANSWER SECTION:
+        # www.example.com. 300 IN A 93.184.216.34
+        local answer_line
+        answer_line=$(dig "${full_domain}" | grep -A1 'ANSWER SECTION:' | tail -n1)
 
-        # Print a readable message showing what kind of record it is and where it points
-        echo "The subdomain $subdomain is a $record_type record and points to $destination"
+        # Extract record type and destination using 'awk'
+        # Fields in answer_line:
+        # $1: full domain (www.example.com.)
+        # $2: TTL (300)
+        # $3: class (IN)
+        # $4: record type (A, CNAME, etc.)
+        # $5: destination (IP or hostname)
+        local record_type
+        local destination
+        record_type=$(echo "${answer_line}" | awk '{print $4}')
+        destination=$(echo "${answer_line}" | awk '{print $5}')
+
+        # Only print if both record_type and destination are non-empty
+        # This ensures we don't print incomplete or invalid records
+        if [ -n "${record_type}" ] && [ -n "${destination}" ]; then
+            # Print in the exact format required
+            echo "The subdomain ${subdomain} is a ${record_type} record and points to ${destination}"
+        fi
     fi
+    # If dig_output is empty, we silently return (per requirement to ignore nonexistent subdomains)
 }
 
-# ------------------------
-# Main script logic below
-# ------------------------
+# Main Script Logic
+# Description: Handles command-line arguments and calls get_subdomain_info
+#              for the appropriate subdomains based on input.
 
-# If exactly one argument is passed (i.e., only the domain)
-if [ $# -eq 1 ]; then
-    domain="$1"  # Save the domain name provided
+# Check the number of command-line arguments
+if [ "$#" -eq 1 ]; then
+    # Only domain provided; check default subdomains in specified order
+    domain="$1"
 
-    # Loop over a list of common subdomains
-    for subdomain in www lb-01 web-01 web-02; do
-        get_subdomain_info "$domain" "$subdomain"  # Check each one
+    # Define the list of subdomains to check (in exact order per requirements)
+    subdomains=("www" "lb-01" "web-01" "web-02")
+
+    # Loop through each subdomain and call the function
+    for subdomain in "${subdomains[@]}"; do
+        get_subdomain_info "${domain}" "${subdomain}"
     done
 
-# If two arguments are passed (i.e., domain and subdomain)
-elif [ $# -eq 2 ]; then
+elif [ "$#" -eq 2 ]; then
+    # Both domain and subdomain provided; check only the specified subdomain
     domain="$1"
     subdomain="$2"
-    get_subdomain_info "$domain" "$subdomain"  # Check the specific subdomain
+    get_subdomain_info "${domain}" "${subdomain}"
 
-# If the user passed incorrect number of arguments
 else
-    # Show usage instructions
+    # Incorrect number of arguments; show usage and exit
     echo "Usage: $0 domain [subdomain]"
-    exit 1  # Exit with error code
+    exit 1
 fi
